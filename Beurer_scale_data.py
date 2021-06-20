@@ -14,6 +14,8 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
+from matplotlib import colors
+
 if not storage_heavy:
     import sys
     if sys.version_info[0] < 3: 
@@ -125,6 +127,11 @@ def redraw_figure (quantities_to_plot):
             ),
             yaxis=(('y%i' % axis_no) if axis_no > 1 else 'y')
         ))
+        # produce a semi-transparent quantity color for the grid
+        diluted_color = list(colors.to_rgba(settings[quantity]['color']))
+        diluted_color[3] = 0.25 # alpha
+        diluted_color = 'rgba(%.2f,%.2f,%.2f,%.2f)' % tuple(diluted_color)
+        # update the layout
         layout_kwargs = {
             (('yaxis%i' % axis_no) if axis_no > 1 else 'yaxis'): dict(
                 title=settings[quantity]['label'],
@@ -133,7 +140,7 @@ def redraw_figure (quantities_to_plot):
                 side=settings[quantity]['axis_side'],
                 overlaying=('y' if axis_no > 1 else None),
                 position=(padding[settings[quantity]['axis_side']] if settings[quantity]['axis_side'] == 'left' else 1.0 - padding[settings[quantity]['axis_side']]),
-                showgrid=True, gridcolor=settings[quantity]['color'],
+                showgrid=True, gridcolor=diluted_color, gridwidth=2,
                 showspikes=True, spikemode='across', spikesnap='cursor'
             )
         }
