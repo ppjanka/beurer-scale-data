@@ -6,7 +6,7 @@ storage_heavy = False # turn on if the data csv file is very large (probably nev
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 import plotly.express as px
@@ -69,8 +69,6 @@ dt_min = df['DateTime-int'].min()
 dt_max = df['DateTime-int'].max()
 
 def dateTimeInt_to_dateTime (dt):
-    print(dt, pd.to_timedelta('1s'), dt * pd.to_timedelta('1s'))
-    print(pd.to_datetime(dt * pd.to_timedelta('1s')))
     return pd.to_datetime(dt * pd.to_timedelta('1s'))
 
 # DRAW THE FIGURE -----------------------------------------------------------
@@ -108,7 +106,7 @@ settings = {
     }
 }
 
-def update_figure (quantities_to_plot):
+def redraw_figure (quantities_to_plot):
 
     fig = go.Figure()
 
@@ -135,7 +133,7 @@ def update_figure (quantities_to_plot):
                 side=settings[quantity]['axis_side'],
                 overlaying=('y' if axis_no > 1 else None),
                 position=(padding[settings[quantity]['axis_side']] if settings[quantity]['axis_side'] == 'left' else 1.0 - padding[settings[quantity]['axis_side']]),
-                showgrid=False,
+                showgrid=True, gridcolor=settings[quantity]['color'],
                 showspikes=True, spikemode='across', spikesnap='cursor'
             )
         }
@@ -145,23 +143,38 @@ def update_figure (quantities_to_plot):
 
     fig.update_layout(
         xaxis=dict(
-            domain=[padding['left'] - padding_step, 1.0 + padding_step - padding['right']]
+            domain=[max(padding['left'] - padding_step, 0.), min(1.0, 1.0 + padding_step - padding['right'])]
         ),
         hovermode='x unified'
     )
 
     return fig
 
-fig = update_figure(['kg', 'Muscles', 'Bones'])
+def update_figure_timerange (time_range, fig):
+    # slightly expand time_range for better viewing
+    padding = 0.05 * (time_range[1] - time_range[0])
+    time_range = [time_range[0] - padding, time_range[1] + padding]
+    # apply the xrange change
+    fig['layout']['xaxis']['range'] = [dateTimeInt_to_dateTime(i*(dt_max-dt_min)/100.+dt_min).strftime("%Y-%m-%d %H:%M:%S") for i in time_range]
+    fig['layout']['xaxis']['autorange'] = False
+    # update the yrange given the xrange visible
+    # TODO (need to do this for each axis separately)
+    return fig
+
+fig = redraw_figure(['kg', 'Muscles', 'Bones'])
 
 # SET UP THE APP ------------------------------------------------------------
-
-print({i:{'label':dateTimeInt_to_dateTime(i*(dt_max-dt_min)/100.+dt_min).strftime("%Y-%m-%d"), 'style':{'color':'black'}} for i in np.linspace(0,100,6)})
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 app.layout = html.Div([
-    dcc.Graph(figure=fig),
+    dcc.Dropdown(
+        id='quantity-dropdown',
+        options=[{'label': settings[quantity]['label'], 'value': quantity} for quantity in settings.keys()],
+        value=['kg', 'Body fat'],
+        multi=True
+    ),
+    dcc.Graph(id='graph', figure=fig),
     dcc.RangeSlider(
         id='time-range-slider',
         min=0,
@@ -170,6 +183,25 @@ app.layout = html.Div([
         marks={int(i):{'label':dateTimeInt_to_dateTime(i*(dt_max-dt_min)/100.+dt_min).strftime("%Y-%m-%d"), 'style':{'color':'black'}} for i in np.linspace(0,100,6)}
     )
 ])
+
+# app callbacks
+
+@app.callback(
+    Output('graph', 'figure'),
+    Input('quantity-dropdown', 'value'),
+    Input('time-range-slider', 'value'),
+    State('graph', 'figure')
+)
+def update_figure (quantities, time_range, fig):
+    ctx = dash.callback_context
+    triggers = [x['prop_id'].split('.')[0] for x in ctx.triggered]
+    if not ctx.triggered or 'quantity-dropdown' in triggers:
+        fig = redraw_figure(quantities)
+    if not ctx.triggered or 'time-range-slider' in triggers:
+        fig = update_figure_timerange(time_range, fig)
+    return fig
+
+# RUN THE SERVER ------------------------------------------------------------
 
 if __name__ == '__main__':
     app.run_server(debug=True)
