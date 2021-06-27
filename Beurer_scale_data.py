@@ -7,6 +7,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 import plotly.express as px
@@ -22,6 +23,8 @@ if not storage_heavy:
         from StringIO import StringIO
     else:
         from io import StringIO
+
+default_quantities = ['kg', 'Body fat']
 
 # LOAD IN THE DATA -----------------------------------------------------------
 
@@ -65,13 +68,22 @@ else: # not storage heavy (single file pass, but saves as string first)
     df = pd.concat(dfs, ignore_index=True)
     del dfs
 
+date_zero = pd.to_datetime('2000-01-01 00:00:00.0000')
 df['DateTime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
-df['DateTime-int'] = pd.to_timedelta(df['DateTime']).dt.total_seconds()
-dt_min = df['DateTime-int'].min()
-dt_max = df['DateTime-int'].max()
+dt_min = (df['DateTime'].min() - date_zero).total_seconds()
+dt_max = (df['DateTime'].max() - date_zero).total_seconds()
+dt_span = dt_max - dt_min
 
+def dateTime_to_dateTimeInt (dt):
+    if not isinstance(dt, np.datetime64):
+        dt = pd.to_datetime(dt)
+    res = (dt - date_zero).total_seconds()
+    res = (res - dt_min) * 100.0 / dt_span
+    return res
 def dateTimeInt_to_dateTime (dt):
-    return pd.to_datetime(dt * pd.to_timedelta('1s'))
+    return date_zero + (dt_min + dt_span * dt/100.) * pd.to_timedelta('1s')
+
+df['DateTime-int'] = df['DateTime'].apply(dateTime_to_dateTimeInt)
 
 # DRAW THE FIGURE -----------------------------------------------------------
 
@@ -162,13 +174,13 @@ def update_figure_timerange (time_range, fig):
     padding = 0.05 * (time_range[1] - time_range[0])
     time_range = [time_range[0] - padding, time_range[1] + padding]
     # apply the xrange change
-    fig['layout']['xaxis']['range'] = [dateTimeInt_to_dateTime(i*(dt_max-dt_min)/100.+dt_min).strftime("%Y-%m-%d %H:%M:%S") for i in time_range]
+    fig['layout']['xaxis']['range'] = [dateTimeInt_to_dateTime(ti) for ti in time_range]
     fig['layout']['xaxis']['autorange'] = False
     # update the yrange given the xrange visible
     # TODO (need to do this for each axis separately)
     return fig
 
-fig = redraw_figure(['kg', 'Muscles', 'Bones'])
+fig = redraw_figure(default_quantities)
 
 # SET UP THE APP ------------------------------------------------------------
 
@@ -178,7 +190,7 @@ app.layout = html.Div([
     dcc.Dropdown(
         id='quantity-dropdown',
         options=[{'label': settings[quantity]['label'], 'value': quantity} for quantity in settings.keys()],
-        value=['kg', 'Body fat'],
+        value=default_quantities,
         multi=True
     ),
     dcc.Graph(id='graph', figure=fig),
@@ -187,26 +199,47 @@ app.layout = html.Div([
         min=0,
         max=100,
         value=[0,100],
-        marks={int(i):{'label':dateTimeInt_to_dateTime(i*(dt_max-dt_min)/100.+dt_min).strftime("%Y-%m-%d"), 'style':{'color':'black'}} for i in np.linspace(0,100,6)}
+        marks={int(ti):{'label':dateTimeInt_to_dateTime(ti).strftime("%Y-%m-%d"), 'style':{'color':'black'}} for ti in np.linspace(0,100,6)},
+        updatemode='drag'
     )
 ])
 
 # app callbacks
 
+# TODO: prevent the two callbacks from calling each other in a loop
+
 @app.callback(
     Output('graph', 'figure'),
     Input('quantity-dropdown', 'value'),
-    Input('time-range-slider', 'value'),
+    Input('time-range-slider', 'drag_value'),
     State('graph', 'figure')
 )
 def update_figure (quantities, time_range, fig):
+    print('Updating the figure.. ', end='')
     ctx = dash.callback_context
     triggers = [x['prop_id'].split('.')[0] for x in ctx.triggered]
-    if not ctx.triggered or 'quantity-dropdown' in triggers:
+    # prevent callback loops
+    if 'quantity-dropdown' in triggers:
         fig = redraw_figure(quantities)
-    if not ctx.triggered or 'time-range-slider' in triggers:
+    if 'time-range-slider' in triggers:
+        print(fig['layout'].keys())
         fig = update_figure_timerange(time_range, fig)
+    print('done.')
     return fig
+
+@app.callback(
+    Output('time-range-slider', 'value'),
+    Input('graph', 'relayoutData')
+)
+def update_time_range_slider (relayoutData):
+    print('Updating the time slider..', end='')
+    # initial and reset
+    if relayoutData == None or 'autosize' in relayoutData.keys() or 'xaxis.autorange' in relayoutData.keys():
+        return [0,100]
+    # modifying the graph through graph tools
+    new_timerange = [dateTime_to_dateTimeInt(t) for t in [relayoutData['xaxis.range[0]'], relayoutData['xaxis.range[1]']]]
+    print('done.')
+    return new_timerange
 
 # RUN THE SERVER ------------------------------------------------------------
 
