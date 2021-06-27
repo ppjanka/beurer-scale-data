@@ -68,6 +68,8 @@ else: # not storage heavy (single file pass, but saves as string first)
     df = pd.concat(dfs, ignore_index=True)
     del dfs
 
+# date and time handling
+
 date_zero = pd.to_datetime('2000-01-01 00:00:00.0000')
 df['DateTime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
 dt_min = (df['DateTime'].min() - date_zero).total_seconds()
@@ -120,6 +122,38 @@ settings = {
     }
 }
 
+pad_fraction = 0.063 # matches Plotly's default AutoScale padding
+def pad_timerange (time_range):
+    ''' slightly expand figure time_range for better viewing'''
+    padding = pad_fraction * (time_range[1] - time_range[0])
+    return [time_range[0] - padding, time_range[1] + padding]
+def unpad_timerange (time_range):
+    ''' remove figure time_range padding'''
+    padding = pad_fraction * (time_range[1] - time_range[0]) / (1.0 + 2*pad_fraction)
+    return [time_range[0]+padding, time_range[1]-padding]
+
+def update_figure_timerange (time_range, fig, scale_yrange=True):
+    time_range = pad_timerange(time_range)
+    # apply the xrange change
+    fig['layout']['xaxis']['range'] = [dateTimeInt_to_dateTime(ti) for ti in time_range]
+    fig['layout']['xaxis']['autorange'] = False
+    # update the yrange given the xrange visible
+    if scale_yrange:
+        for key in fig['layout']:
+            if key[:5] == 'yaxis':
+                # figure out which quantity is plotted on this axis
+                axis = key
+                label = fig['layout'][key]['title']['text']
+                for quantity in settings.keys():
+                    if settings[quantity]['label'] == label:
+                        break
+                # update the axis yrange to what is visible
+                visible_data = df[quantity][(df['DateTime-int'] >= time_range[0]) & (df['DateTime-int'] <= time_range[1])]
+                fig['layout'][axis]['range'] = pad_timerange([visible_data.min(), visible_data.max()])
+                fig['layout'][axis]['autorange'] = False
+                del visible_data
+    return fig
+
 def redraw_figure (quantities_to_plot):
 
     fig = go.Figure()
@@ -162,22 +196,14 @@ def redraw_figure (quantities_to_plot):
 
     fig.update_layout(
         xaxis=dict(
-            domain=[max(padding['left'] - padding_step, 0.), min(1.0, 1.0 + padding_step - padding['right'])]
+            domain=[max(padding['left'] - padding_step, 0.), min(1.0, 1.0 + padding_step - padding['right'])],
+            autorange=False
         ),
         hovermode='x unified'
     )
 
-    return fig
+    update_figure_timerange([0,100], fig)
 
-def update_figure_timerange (time_range, fig):
-    # slightly expand time_range for better viewing
-    padding = 0.05 * (time_range[1] - time_range[0])
-    time_range = [time_range[0] - padding, time_range[1] + padding]
-    # apply the xrange change
-    fig['layout']['xaxis']['range'] = [dateTimeInt_to_dateTime(ti) for ti in time_range]
-    fig['layout']['xaxis']['autorange'] = False
-    # update the yrange given the xrange visible
-    # TODO (need to do this for each axis separately)
     return fig
 
 fig = redraw_figure(default_quantities)
@@ -204,9 +230,7 @@ app.layout = html.Div([
     )
 ])
 
-# app callbacks
-
-# TODO: prevent the two callbacks from calling each other in a loop
+# APP CALLBACKS ------------------------------------------------------------
 
 @app.callback(
     Output('graph', 'figure'),
@@ -215,16 +239,20 @@ app.layout = html.Div([
     State('graph', 'figure')
 )
 def update_figure (quantities, time_range, fig):
-    print('Updating the figure.. ', end='')
+    print('Updating the figure.. ', end='', flush=True)
     ctx = dash.callback_context
     triggers = [x['prop_id'].split('.')[0] for x in ctx.triggered]
     # prevent callback loops
     if 'quantity-dropdown' in triggers:
         fig = redraw_figure(quantities)
     if 'time-range-slider' in triggers:
-        print(fig['layout'].keys())
-        fig = update_figure_timerange(time_range, fig)
-    print('done.')
+        current_timerange = unpad_timerange([1.0*dateTime_to_dateTimeInt(t) for t in fig['layout']['xaxis']['range']])
+        if time_range != current_timerange:
+            fig = update_figure_timerange(time_range, fig)
+        else: # nothing to do
+            print('noting to update. ', end='', flush=True)
+            PreventUpdate()
+    print('done.', flush=True)
     return fig
 
 @app.callback(
@@ -232,13 +260,15 @@ def update_figure (quantities, time_range, fig):
     Input('graph', 'relayoutData')
 )
 def update_time_range_slider (relayoutData):
-    print('Updating the time slider..', end='')
+    print('Updating the time slider..', end='', flush=True)
     # initial and reset
     if relayoutData == None or 'autosize' in relayoutData.keys() or 'xaxis.autorange' in relayoutData.keys():
+        print('done.', flush=True)
         return [0,100]
     # modifying the graph through graph tools
-    new_timerange = [dateTime_to_dateTimeInt(t) for t in [relayoutData['xaxis.range[0]'], relayoutData['xaxis.range[1]']]]
-    print('done.')
+    new_timerange = [1.0*dateTime_to_dateTimeInt(t) for t in [relayoutData['xaxis.range[0]'], relayoutData['xaxis.range[1]']]]
+    new_timerange = unpad_timerange(new_timerange)
+    print('done.', flush=True)
     return new_timerange
 
 # RUN THE SERVER ------------------------------------------------------------
