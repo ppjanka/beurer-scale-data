@@ -1,6 +1,8 @@
 # beurer-scale-data
 A dash application to review weight and composition data from Bluetooth-enabled Beurer scales.
 
+![Screenshot from 2021-06-27 13-46-53](https://user-images.githubusercontent.com/22397839/123543353-492c6800-d74e-11eb-82cc-dcfd6a725d40.png)
+
 -------------------------
 
 **Motivation:** As an owner of a Bluetooth-enabled "smart" Beurer scales, I am very underwhelmed with their interface for reviewing the measurements done with the scales. To give an example, below to the left is a snapshot from the home screen of their Beurer Health Manager app. Frankly, it would be difficult to make this plot *less* informative... While, with multiple clicks, one can get somewhat more useful plots in the app (see the right-hand plot below, note that there is no way to view it in landscape mode, pan, or zoom the data...), the interface is far from intuitive or easy-to-use. Sadly, the web interface is not much better.
