@@ -154,7 +154,7 @@ def update_figure_timerange (time_range, fig, scale_yrange=True):
                 del visible_data
     return fig
 
-def redraw_figure (quantities_to_plot):
+def redraw_figure (quantities_to_plot, running_mean_length=2):
 
     fig = go.Figure()
 
@@ -173,6 +173,22 @@ def redraw_figure (quantities_to_plot):
             ),
             yaxis=(('y%i' % axis_no) if axis_no > 1 else 'y')
         ))
+        # add a running mean if requested
+        if running_mean_length != None:
+            running_mean = df[['DateTime', quantity]].reset_index().set_index('DateTime').sort_index()
+            running_mean = running_mean.rolling('10D').mean()
+            #TODO: shift x by half the window size
+            fig.add_trace(go.Scatter(
+                x=(running_mean.index), y=running_mean[quantity],
+                mode='lines',
+                hovertemplate='%{hovertext:.1f}',
+                hovertext=df[quantity],
+                name=('%s, running mean' % settings[quantity]['label']),
+                marker=dict(
+                    color=settings[quantity]['color']
+                ),
+                yaxis=(('y%i' % axis_no) if axis_no > 1 else 'y')
+            ))
         # produce a semi-transparent quantity color for the grid
         diluted_color = list(colors.to_rgba(settings[quantity]['color']))
         diluted_color[3] = 0.25 # alpha
@@ -187,7 +203,7 @@ def redraw_figure (quantities_to_plot):
                 overlaying=('y' if axis_no > 1 else None),
                 position=(padding[settings[quantity]['axis_side']] if settings[quantity]['axis_side'] == 'left' else 1.0 - padding[settings[quantity]['axis_side']]),
                 showgrid=True, gridcolor=diluted_color, gridwidth=2,
-                showspikes=True, spikemode='across', spikesnap='cursor'
+                showspikes=False, spikemode='across', spikesnap='cursor'
             )
         }
         fig.update_layout(**layout_kwargs)
@@ -199,7 +215,7 @@ def redraw_figure (quantities_to_plot):
             domain=[max(padding['left'] - padding_step, 0.), min(1.0, 1.0 + padding_step - padding['right'])],
             autorange=False
         ),
-        hovermode='x unified'
+        hovermode='x' # TODO: once the plotly bug fixed, change to "x unified" and showspikes=True above
     )
 
     update_figure_timerange([0,100], fig)
@@ -208,7 +224,7 @@ def redraw_figure (quantities_to_plot):
 
 fig = redraw_figure(default_quantities)
 
-# SET UP THE APP ------------------------------------------------------------
+# APP LAYOUT ----------------------------------------------------------------
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
@@ -219,6 +235,23 @@ app.layout = html.Div([
         value=default_quantities,
         multi=True
     ),
+    html.Div(className='row', children=[
+        html.Div(),
+        dcc.Checklist(
+            id='options-checklist',
+            options=[{'label': 'Running Mean', 'value': 'running_mean'}],
+            value=['running_mean',]
+        ),
+        dcc.Slider(
+            id='running-mean-slider',
+            min=1,
+            max=60,
+            value=10,
+            marks={i:('%i days' % i if i > 1 else '1 day') for i in [1,20,40,60]},
+            updatemode='drag'
+        ),
+        html.Div()
+    ], style={'display':'grid', 'grid-template-columns': '10% 20% 60% 10%', 'height':'40px'}),
     dcc.Graph(id='graph', figure=fig),
     dcc.RangeSlider(
         id='time-range-slider',
@@ -235,17 +268,18 @@ app.layout = html.Div([
 @app.callback(
     Output('graph', 'figure'),
     Input('quantity-dropdown', 'value'),
-    Input('time-range-slider', 'drag_value'),
+    Input('time-range-slider', 'value'),
     State('graph', 'figure')
 )
 def update_figure (quantities, time_range, fig):
+    print(fig['layout']['hovermode'])
     print('Updating the figure.. ', end='', flush=True)
     ctx = dash.callback_context
     triggers = [x['prop_id'].split('.')[0] for x in ctx.triggered]
     # prevent callback loops
     if 'quantity-dropdown' in triggers:
         fig = redraw_figure(quantities)
-    if 'time-range-slider' in triggers:
+    if 'time-range-slider' in triggers and time_range != None:
         current_timerange = unpad_timerange([1.0*dateTime_to_dateTimeInt(t) for t in fig['layout']['xaxis']['range']])
         if time_range != current_timerange:
             fig = update_figure_timerange(time_range, fig)
