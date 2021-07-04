@@ -1,7 +1,7 @@
 # beurer-scale-data
 A dash application to review weight and composition data from Bluetooth-enabled Beurer scales.
 
-![Screenshot from 2021-06-27 13-46-53](https://user-images.githubusercontent.com/22397839/123543353-492c6800-d74e-11eb-82cc-dcfd6a725d40.png)
+![Screenshot from 2021-07-04 18-16-07](https://user-images.githubusercontent.com/22397839/124392080-0f320780-dcf4-11eb-9a6b-1f0015c8536e.png)
 
 -------------------------
 
