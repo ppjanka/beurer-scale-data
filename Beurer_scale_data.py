@@ -181,8 +181,9 @@ def redraw_figure (quantities_to_plot, running_mean_length):
             fig.add_trace(go.Scatter(
                 x=running_mean.index, y=running_mean[quantity],
                 mode='lines',
-                hovertemplate='%{hovertext:.1f}',
-                hovertext=df[quantity],
+                hoverinfo='skip',
+                #hovertemplate='%{hovertext:.1f}',
+                #hovertext=df[quantity],
                 name=('%s, running mean' % settings[quantity]['label']),
                 marker=dict(
                     color=settings[quantity]['color']
