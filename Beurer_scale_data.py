@@ -25,6 +25,7 @@ if not storage_heavy:
         from io import StringIO
 
 default_quantities = ['kg', 'Body fat']
+default_running_mean_length = 7
 
 # LOAD IN THE DATA -----------------------------------------------------------
 
@@ -154,7 +155,7 @@ def update_figure_timerange (time_range, fig, scale_yrange=True):
                 del visible_data
     return fig
 
-def redraw_figure (quantities_to_plot, running_mean_length=2):
+def redraw_figure (quantities_to_plot, running_mean_length):
 
     fig = go.Figure()
 
@@ -176,10 +177,9 @@ def redraw_figure (quantities_to_plot, running_mean_length=2):
         # add a running mean if requested
         if running_mean_length != None:
             running_mean = df[['DateTime', quantity]].reset_index().set_index('DateTime').sort_index()
-            running_mean = running_mean.rolling('10D').mean()
-            #TODO: shift x by half the window size
+            running_mean = running_mean.resample('1D').mean().rolling(running_mean_length, min_periods=0, center=True).mean()
             fig.add_trace(go.Scatter(
-                x=(running_mean.index), y=running_mean[quantity],
+                x=running_mean.index, y=running_mean[quantity],
                 mode='lines',
                 hovertemplate='%{hovertext:.1f}',
                 hovertext=df[quantity],
@@ -222,11 +222,16 @@ def redraw_figure (quantities_to_plot, running_mean_length=2):
 
     return fig
 
-fig = redraw_figure(default_quantities)
+fig = redraw_figure(default_quantities, default_running_mean_length)
 
 # APP LAYOUT ----------------------------------------------------------------
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+
+def RM_slider_transform (x):
+    return int(100.*np.log(x)/np.log(5))
+def RM_slider_invTransform (x):
+    return int(np.exp(x*np.log(5.) / 100.))
 
 app.layout = html.Div([
     dcc.Dropdown(
@@ -244,11 +249,10 @@ app.layout = html.Div([
         ),
         dcc.Slider(
             id='running-mean-slider',
-            min=1,
-            max=60,
-            value=10,
-            marks={i:('%i days' % i if i > 1 else '1 day') for i in [1,20,40,60]},
-            updatemode='drag'
+            min=0,
+            max=RM_slider_transform(90),
+            value=RM_slider_transform(default_running_mean_length),
+            marks={RM_slider_transform(i): ('1 day' if i==1 else '%i days' % i if i < 30 else '%im' % int(i/30.)) for i in [1,7,14,30,60,90]}
         ),
         html.Div()
     ], style={'display':'grid', 'grid-template-columns': '10% 20% 60% 10%', 'height':'40px'}),
@@ -269,16 +273,23 @@ app.layout = html.Div([
     Output('graph', 'figure'),
     Input('quantity-dropdown', 'value'),
     Input('time-range-slider', 'value'),
+    Input('options-checklist', 'value'),
+    Input('running-mean-slider', 'value'),
     State('graph', 'figure')
 )
-def update_figure (quantities, time_range, fig):
+def update_figure (quantities, time_range, options, running_mean_length, fig):
     print(fig['layout']['hovermode'])
     print('Updating the figure.. ', end='', flush=True)
     ctx = dash.callback_context
     triggers = [x['prop_id'].split('.')[0] for x in ctx.triggered]
     # prevent callback loops
-    if 'quantity-dropdown' in triggers:
-        fig = redraw_figure(quantities)
+    if len(set(triggers).intersection(['quantity-dropdown', 'options-checklist', 'running-mean-slider'])) > 0:
+        if 'running_mean' not in options:
+            running_mean_length = None
+        else:
+            running_mean_length = RM_slider_invTransform(running_mean_length)
+        fig = redraw_figure(quantities, running_mean_length)
+        fig = update_figure_timerange(time_range, fig)
     if 'time-range-slider' in triggers and time_range != None:
         current_timerange = unpad_timerange([1.0*dateTime_to_dateTimeInt(t) for t in fig['layout']['xaxis']['range']])
         if time_range != current_timerange:
