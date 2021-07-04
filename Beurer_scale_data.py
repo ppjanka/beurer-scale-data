@@ -215,7 +215,8 @@ def redraw_figure (quantities_to_plot, running_mean_length):
             domain=[max(padding['left'] - padding_step, 0.), min(1.0, 1.0 + padding_step - padding['right'])],
             autorange=False
         ),
-        hovermode='x unified' # TODO: once the plotly bug fixed, change to "x unified" and showspikes=True above
+        hovermode='x unified',
+        margin={'t':40}
     )
 
     update_figure_timerange([0,100], fig)
@@ -240,6 +241,7 @@ app.layout = html.Div([
         value=default_quantities,
         multi=True
     ),
+    html.Div(" "),
     html.Div(className='row', children=[
         html.Div(),
         dcc.Checklist(
@@ -255,7 +257,7 @@ app.layout = html.Div([
             marks={RM_slider_transform(i): ('1 day' if i==1 else '%i days' % i if i < 30 else '%im' % int(i/30.)) for i in [1,7,14,30,60,90]}
         ),
         html.Div()
-    ], style={'display':'grid', 'grid-template-columns': '10% 20% 60% 10%', 'height':'40px'}),
+    ], style={'display':'grid', 'grid-template-columns': '10% 20% 60% 10%', 'height':'40px', 'padding':10}),
     dcc.Graph(id='graph', figure=fig),
     dcc.RangeSlider(
         id='time-range-slider',
