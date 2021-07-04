@@ -203,7 +203,7 @@ def redraw_figure (quantities_to_plot, running_mean_length):
                 overlaying=('y' if axis_no > 1 else None),
                 position=(padding[settings[quantity]['axis_side']] if settings[quantity]['axis_side'] == 'left' else 1.0 - padding[settings[quantity]['axis_side']]),
                 showgrid=True, gridcolor=diluted_color, gridwidth=2,
-                showspikes=False, spikemode='across', spikesnap='cursor'
+                showspikes=True, spikemode='across', spikesnap='cursor'
             )
         }
         fig.update_layout(**layout_kwargs)
@@ -215,7 +215,7 @@ def redraw_figure (quantities_to_plot, running_mean_length):
             domain=[max(padding['left'] - padding_step, 0.), min(1.0, 1.0 + padding_step - padding['right'])],
             autorange=False
         ),
-        hovermode='x' # TODO: once the plotly bug fixed, change to "x unified" and showspikes=True above
+        hovermode='x unified' # TODO: once the plotly bug fixed, change to "x unified" and showspikes=True above
     )
 
     update_figure_timerange([0,100], fig)
