@@ -230,6 +230,7 @@ fig = redraw_figure(default_quantities, default_running_mean_length)
 # APP LAYOUT ----------------------------------------------------------------
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+server = app.server
 
 def RM_slider_transform (x):
     return int(100.*np.log(x)/np.log(5))
@@ -323,4 +324,4 @@ def update_time_range_slider (relayoutData):
 # RUN THE SERVER ------------------------------------------------------------
 
 if __name__ == '__main__':
-    app.server(host='0.0.0.0', port=os.environ['PORT'], debug=True)
+    app.run_server(host='0.0.0.0', port=8080, debug=True, use_reloader=False)

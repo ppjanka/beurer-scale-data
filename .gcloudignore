@@ -3,4 +3,6 @@
 .gcloudignore
 
 .pyc
-.env
+environment.yml
+LICENSE
+.md
