@@ -1,7 +1,9 @@
 # beurer-scale-data
 A dash application to review weight and composition data from Bluetooth-enabled Beurer scales.
 
-The app is prepared to be run on Google Cloud following the steps outlined in a [tutorial by Michael Hodge](https://datasciencecampus.github.io/deploy-dash-with-gcp/) (thanks!). To interact with a cloud-deplyed version, see [ppjanka.eu/weight-composition-vis](https://ppjanka.eu/weight-composition-vis). Enjoy!
+**Try on-line**: The app is prepared to be run on Google Cloud following the steps outlined in a [tutorial by Michael Hodge](https://datasciencecampus.github.io/deploy-dash-with-gcp/) (thanks!). To interact with a cloud-deplyed version, see [ppjanka.eu/weight-composition-vis](https://ppjanka.eu/weight-composition-vis). Enjoy!
+
+**Run locally**: If you would like to run the app locally on your machine, clone the repo, set up an anaconda environment using *environment.yml*, and type `python main.py -nocloud`.
 
 ![Screenshot from 2021-07-04 18-16-07](https://user-images.githubusercontent.com/22397839/124392080-0f320780-dcf4-11eb-9a6b-1f0015c8536e.png)
 
