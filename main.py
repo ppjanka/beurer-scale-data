@@ -18,8 +18,8 @@ import numpy as np
 from matplotlib import colors
 
 import os
+import sys
 if not storage_heavy:
-    import sys
     if sys.version_info[0] < 3: 
         from StringIO import StringIO
     else:
@@ -27,6 +27,8 @@ if not storage_heavy:
 
 default_quantities = ['kg', 'Body fat']
 default_running_mean_length = 7
+
+nocloud = ('-nocloud' in sys.argv)
 
 # LOAD IN THE DATA -----------------------------------------------------------
 
@@ -324,4 +326,7 @@ def update_time_range_slider (relayoutData):
 # RUN THE SERVER ------------------------------------------------------------
 
 if __name__ == '__main__':
-    app.run_server(host='0.0.0.0', port=int(os.environ['PORT']), debug=True, use_reloader=False)
+    if nocloud: # run locally
+        app.run_server(debug=True)
+    else: # run in google cloud
+        app.run_server(host='0.0.0.0', port=int(os.environ['PORT']), debug=True, use_reloader=False)
