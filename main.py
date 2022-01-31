@@ -322,4 +322,4 @@ def update_time_range_slider (relayoutData):
 # RUN THE SERVER ------------------------------------------------------------
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.server(host='0.0.0.0', port=8080, debug=True)
