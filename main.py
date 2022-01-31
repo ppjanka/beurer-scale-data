@@ -17,6 +17,7 @@ import numpy as np
 
 from matplotlib import colors
 
+import os
 if not storage_heavy:
     import sys
     if sys.version_info[0] < 3: 
@@ -322,4 +323,4 @@ def update_time_range_slider (relayoutData):
 # RUN THE SERVER ------------------------------------------------------------
 
 if __name__ == '__main__':
-    app.server(host='0.0.0.0', port=8080, debug=True)
+    app.server(host='0.0.0.0', port=os.environ['PORT'], debug=True)
