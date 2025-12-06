@@ -4,9 +4,7 @@ storage_heavy = False # turn on if the data csv file is very large (probably nev
 
 # imports
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Input, Output, State
+from dash import dcc, html, Input, Output, State
 from dash.exceptions import PreventUpdate
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -200,8 +198,10 @@ def redraw_figure (quantities_to_plot, running_mean_length):
         # update the layout
         layout_kwargs = {
             (('yaxis%i' % axis_no) if axis_no > 1 else 'yaxis'): dict(
-                title=settings[quantity]['label'],
-                titlefont=dict(color=settings[quantity]['color']),
+                title=dict(
+                    text=settings[quantity]['label'],
+                    font=dict(color=settings[quantity]['color'])
+                ),
                 tickfont=dict(color=settings[quantity]['color']),
                 side=settings[quantity]['axis_side'],
                 overlaying=('y' if axis_no > 1 else None),
@@ -327,6 +327,6 @@ def update_time_range_slider (relayoutData):
 
 if __name__ == '__main__':
     if nocloud: # run locally
-        app.run_server(debug=True)
+        app.run(debug=True)
     else: # run in google cloud
-        app.run_server(host='0.0.0.0', port=int(os.environ['PORT']), debug=True, use_reloader=False)
+        app.run(host='0.0.0.0', port=int(os.environ['PORT']), debug=True, use_reloader=False)
