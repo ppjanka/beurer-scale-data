@@ -5,6 +5,8 @@ A dash application to review weight and composition data from Bluetooth-enabled 
 
 **Run locally**: If you would like to run the app locally on your machine, clone the repo, set up an anaconda environment using *environment.yml*, and type `python main.py -nocloud`.
 
+**Automated Deployment**: The app is automatically deployed to Google Cloud App Engine via GitHub Actions whenever changes are pushed to the `main` branch. See [DEPLOYMENT.md](DEPLOYMENT.md) for details on the deployment configuration.
+
 ![Screenshot from 2021-07-04 18-16-07](https://user-images.githubusercontent.com/22397839/124392080-0f320780-dcf4-11eb-9a6b-1f0015c8536e.png)
 
 -------------------------
