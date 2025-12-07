@@ -35,7 +35,17 @@ When code is pushed to the `main` branch:
 3. Sets up the Google Cloud SDK
 4. Deploys the application to App Engine using `gcloud app deploy`
 
-The deployment is non-interactive (`--quiet` flag) and uses the configuration specified in `app.yaml`.
+The deployment is non-interactive (`--quiet` flag) and uses the configuration specified in `app.yaml`. The project ID is automatically extracted from the service account credentials, so no additional configuration is needed.
+
+**Note**: The workflow will fail with a non-zero exit code if the deployment encounters any errors.
+
+### Advanced Configuration (Optional)
+
+For production environments, you may want to consider:
+
+- **Environment Protection**: Configure a GitHub environment with required reviewers to add manual approval before deployment
+- **Deployment Versioning**: Add `--version` flags to track specific deployment versions
+- **Deployment Notifications**: Add steps to notify your team when deployments succeed or fail
 
 ### Manual Deployment
 
