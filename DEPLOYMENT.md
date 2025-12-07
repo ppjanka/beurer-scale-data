@@ -2,7 +2,7 @@
 
 ## Automated Deployment to Google Cloud App Engine
 
-This repository is configured with GitHub Actions to automatically deploy the application to Google Cloud App Engine when changes are pushed to the `main` branch.
+This repository is configured with GitHub Actions to automatically deploy the application to Google Cloud App Engine when changes are pushed to the `master` branch.
 
 ### Workflow Configuration
 
@@ -28,7 +28,7 @@ The following repository secret must be configured in GitHub for the workflow to
 
 ### Deployment Process
 
-When code is pushed to the `main` branch:
+When code is pushed to the `master` branch:
 
 1. The workflow checks out the code
 2. Authenticates to Google Cloud using the service account key
